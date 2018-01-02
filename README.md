@@ -12,3 +12,7 @@ These are being added to regularly but if there is anything that is high priorit
 
 
 ## [Read Full Doc](https://christienguy.github.io/pokeapi-graphql/)
+
+
+
+Run with `docker run -p 5000:5000 --name pokeapi-graphql -v $PWD:/usr/src/app graphql dev`

@@ -1,0 +1,10 @@
+version: '3'
+services:
+  graphql-api:
+    build: 
+      context: .
+    command: dev
+    ports:
+    - "5000:5000"
+    volumes:
+    - .:/usr/src/app

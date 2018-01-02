@@ -1,18 +1,15 @@
 import express from "express";
 import graphQLHTTP from "express-graphql";
 import DataLoader from "dataloader";
+import cors from "cors";
 
 import schema from "./schema";
 import fetch from "node-fetch";
 
-import { BASE_URL } from './config';
-
+import { getJSONFromRelativeURL } from "./helpers";
 const app = express();
 
-
-function getJSONFromRelativeURL(relativeURL) {
-  return fetch(`${BASE_URL}${relativeURL}`).then(res => res.json());
-}
+app.use(cors());
 
 function getPokemon(name) {
   return getJSONFromRelativeURL(`/pokemon/${name}`).then(json => json);
@@ -20,18 +17,21 @@ function getPokemon(name) {
 function getMove(name) {
   return getJSONFromRelativeURL(`/move/${name}`).then(json => json);
 }
+function getType(name) {
+  return getJSONFromRelativeURL(`/type/${name}`).then(json => json);
+}
 
 app.use(
   graphQLHTTP(req => {
     const pokemonLoader = new DataLoader(keys =>
       Promise.all(keys.map(getPokemon))
     );
-    const moveLoader = new DataLoader(keys => 
-      Promise.all(keys.map(getMove))
-    );
+    const moveLoader = new DataLoader(keys => Promise.all(keys.map(getMove)));
+    const typeLoader = new DataLoader(keys => Promise.all(keys.map(getType)));
     const loaders = {
       pokemon: pokemonLoader,
-      move: moveLoader
+      move: moveLoader,
+      type: typeLoader
     };
     return {
       context: { loaders },

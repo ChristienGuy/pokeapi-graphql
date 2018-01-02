@@ -9,15 +9,9 @@ import {
   GraphQLBoolean
 } from "graphql";
 
-import fetch from "node-fetch";
-
 // TODO: move this into environment variables
-import { BASE_URL } from './config';
-
-
-function getJSONFromRelativeURL(relativeURL) {
-  return fetch(`${BASE_URL}${relativeURL}`).then(res => res.json());
-}
+import { BASE_URL } from "./config";
+import { getJSONFromRelativeURL } from "./helpers";
 
 // GET ENDPOINTS FROM NAME
 function getForm(name) {
@@ -31,7 +25,6 @@ function getPokedex(limit = 20, offset = 0) {
     `/pokemon?limit=${limit}&offset=${offset}`
   ).then(json => json);
 }
-
 
 const AbilityType = new GraphQLObjectType({
   name: "Ability",
@@ -187,6 +180,11 @@ const PokemonType = new GraphQLObjectType({
     },
     stats: {
       type: new GraphQLList(StatType)
+    },
+    types: {
+      type: new GraphQLList(TypeType),
+      resolve: (pokemon, args, { loaders }) =>
+        loaders.type.loadMany(pokemon.types.map(type => type.type.name))
     }
   })
 });
@@ -201,9 +199,53 @@ const StatType = new GraphQLObjectType({
   })
 });
 
+const TypeType = new GraphQLObjectType({
+  name: "Type",
+  description: "...",
+  fields: () => ({
+    name: { type: GraphQLString },
+    pokemon: {
+      type: new GraphQLList(PokemonType),
+      resolve: (type, args, { loaders }) =>
+        loaders.pokemon.loadMany(
+          type.pokemon.map(pokemon => pokemon.pokemon.name)
+        )
+    },
+    half_damage_from: {
+      type: new GraphQLList(TypeType),
+      resolve: (type, args, { loaders }) =>
+        loaders.type.loadMany(
+          type.damage_relations.half_damage_from.map(type => type.name)
+        )
+    },
+    half_damage_to: {
+      type: new GraphQLList(TypeType),
+      resolve: (type, args, { loaders }) =>
+        loaders.type.loadMany(
+          type.damage_relations.half_damage_to.map(type => type.name)
+        )
+    },
+    double_damage_from: {
+      type: new GraphQLList(TypeType),
+      resolve: (type, args, { loaders }) =>
+        loaders.type.loadMany(
+          type.damage_relations.double_damage_from.map(type => type.name)
+        )
+    },
+    double_damage_to: {
+      type: new GraphQLList(TypeType),
+      resolve: (type, args, { loaders }) =>
+        loaders.type.loadMany(
+          type.damage_relations.double_damage_to.map(type => type.name)
+        )
+    }
+  })
+});
+
 const PokedexType = new GraphQLObjectType({
   name: "Pokedex",
-  description: "Returns a list of Pokemon types. By default it will return the first 20.",
+  description:
+    "Returns a list of Pokemon types. By default it will return the first 20.",
   fields: () => ({
     count: { type: GraphQLInt },
     pokemon: {
@@ -223,7 +265,8 @@ const QueryType = new GraphQLObjectType({
   fields: () => ({
     pokedex: {
       type: PokedexType,
-      description: 'Gets a list of Pokemon. By default it will return the first 20.',
+      description:
+        "Gets a list of Pokemon. By default it will return the first 20.",
       args: {
         limit: { type: GraphQLInt },
         offset: { type: GraphQLInt }
@@ -232,7 +275,7 @@ const QueryType = new GraphQLObjectType({
     },
     pokemon: {
       type: PokemonType,
-      description: 'Gets single pokemon from the name',
+      description: "Gets single pokemon from the name",
       args: {
         name: { type: GraphQLString }
       },
@@ -260,6 +303,14 @@ const QueryType = new GraphQLObjectType({
         name: { type: GraphQLString }
       },
       resolve: (root, args, { loaders }) => loaders.move.load(args.name)
+    },
+    type: {
+      type: TypeType,
+      description: "Gets a single type",
+      args: {
+        name: { type: GraphQLString }
+      },
+      resolve: (root, args, { loaders }) => loaders.type.load(args.name)
     }
   })
 });
