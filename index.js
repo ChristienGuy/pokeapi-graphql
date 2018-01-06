@@ -1,44 +1,36 @@
 import express from "express";
 import graphQLHTTP from "express-graphql";
-import DataLoader from "dataloader";
 import cors from "cors";
+import path from "path";
 
-import schema from "./schema";
-import fetch from "node-fetch";
+import schema from "./schema/schema";
+import { connectMongo } from "./mongo-connector";
+import { buildDataLoaders } from "./schema/loaders";
 
-import { getJSONFromRelativeURL } from "./helpers";
-const app = express();
+(async () => {
+  try {
+    const mongo = await connectMongo();
+    const app = express();
 
-app.use(cors());
-
-function getPokemon(name) {
-  return getJSONFromRelativeURL(`/pokemon/${name}`).then(json => json);
-}
-function getMove(name) {
-  return getJSONFromRelativeURL(`/move/${name}`).then(json => json);
-}
-function getType(name) {
-  return getJSONFromRelativeURL(`/type/${name}`).then(json => json);
-}
-
-app.use(
-  graphQLHTTP(req => {
-    const pokemonLoader = new DataLoader(keys =>
-      Promise.all(keys.map(getPokemon))
+    app.use(cors());
+    app.use('/', express.static('docs'));
+    app.use(
+      
+      graphQLHTTP((req, res, graphQLParams) => {
+        const loaders = buildDataLoaders(mongo);
+        return {
+          context: { loaders, mongo },
+          schema,
+          graphiql: true
+        };
+      })
     );
-    const moveLoader = new DataLoader(keys => Promise.all(keys.map(getMove)));
-    const typeLoader = new DataLoader(keys => Promise.all(keys.map(getType)));
-    const loaders = {
-      pokemon: pokemonLoader,
-      move: moveLoader,
-      type: typeLoader
-    };
-    return {
-      context: { loaders },
-      schema,
-      graphiql: true
-    };
-  })
-);
 
-app.listen(5000);
+    const PORT = process.env.port || 5000;
+    app.listen(PORT, e => {
+      console.log(`Listening on port ${PORT}`);
+    });
+  } catch (error) {
+    console.log(error.stack);
+  }
+})();
