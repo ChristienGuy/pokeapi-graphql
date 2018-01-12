@@ -16,4 +16,6 @@ RUN apt-get install -y mongodb-org-tools
 
 WORKDIR /usr/src/seed
 
-CMD node ./data/seed.js
+RUN ["chmod", "+x", "./wait-for-it.sh"]
+
+CMD ./wait-for-it.sh mongodb:27017 -- node ./data/seed.js
