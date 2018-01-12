@@ -263,7 +263,6 @@ const PokedexType = new GraphQLObjectType({
     pokemon: {
       type: new GraphQLList(PokemonType),
       resolve: (pokedex, args, { loaders }) => {
-        console.log(pokedex);
         const pokemonNames = pokedex.map(pokemon => pokemon.identifier);
         return loaders.pokemon.loadMany(pokemonNames);
       }

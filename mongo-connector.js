@@ -3,12 +3,13 @@ import mongo from "mongodb";
 export const MongoClient = mongo.MongoClient;
 
 console.log(process.env.NODE_ENV);
-let url = ''
-if (process.env.NODE_ENV === 'dev') {
+let url = "";
+if (process.env.NODE_ENV === "dev") {
   url = "mongodb://localhost:27017/";
 } else {
   url = "mongodb://mongodb:27017/";
 }
+console.log(url);
 const dbName = "pokeapi";
 
 export const connectMongo = async () => {
