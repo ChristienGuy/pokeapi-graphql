@@ -13,4 +13,4 @@ RUN ["chmod", "+x", "./wait-for-it.sh"]
 RUN npm install
 EXPOSE 80
 
-ENTRYPOINT ./wait-for-it.sh mongodb:27017 -- ./run.sh
+CMD ./wait-for-it.sh mongodb:27017 -- ./run.sh
