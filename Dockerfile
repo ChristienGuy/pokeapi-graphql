@@ -8,7 +8,9 @@ WORKDIR /usr/src/app
 COPY . /usr/src/app
 
 RUN ["chmod", "+x", "./run.sh"]
-RUN ["chmod", "+x", "./wait-for-it.sh"]
+RUN ["chmod", "+x", "./wait-for.sh"]
 # Install dependencies
 RUN npm install
 EXPOSE 80
+
+CMD sh ./wait-for.sh mongodb:27017 -- npm start

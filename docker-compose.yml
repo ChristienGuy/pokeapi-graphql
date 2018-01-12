@@ -16,7 +16,6 @@ services:
       - "80:80"
     links:
       - mongodb
-    command: ["sh", "./wait-for-it.sh", "mongodb:27017", "--", "./run.sh"]
 
   # image specifically for seeding the database
   mongo-seed:
