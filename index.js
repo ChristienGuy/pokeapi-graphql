@@ -25,8 +25,8 @@ import { buildDataLoaders } from "./schema/loaders";
         };
       })
     );
-
-    const PORT = process.env.port || 5000;
+    
+    const PORT = process.env.PORT || 80;
     app.listen(PORT, e => {
       console.log(`Listening on port ${PORT}`);
     });

@@ -94,7 +94,7 @@ export const buildDataLoaders = ({ Pokemon, Moves, Types, Stats }) => ({
                 },
                 {
                   $group: {
-                    "_id": ""
+                    _id: ""
                   }
                 }
               ],
@@ -211,5 +211,5 @@ export const buildDataLoaders = ({ Pokemon, Moves, Types, Stats }) => ({
       );
     }
     // Types.find({ id: { $in: keys } }).toArray()
-  )
+  ),
 });

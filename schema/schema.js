@@ -85,7 +85,10 @@ const MoveType = new GraphQLObjectType({
     power: { type: GraphQLInt, resolve: move => move.power || null },
     pokemon: {
       type: new GraphQLList(PokemonType),
-      resolve: (move, args, { loaders }) => loaders.pokemon.loadMany(move.pokemon.map(pokemon => pokemon.pokemon_id))
+      resolve: (move, args, { loaders }) =>
+        loaders.pokemon.loadMany(
+          move.pokemon.map(pokemon => pokemon.pokemon_id)
+        )
     },
     // FIXME: these no longer return data after data was moved to mongo
     effect_entries: { type: new GraphQLList(MoveEffectType) },
@@ -260,7 +263,8 @@ const PokedexType = new GraphQLObjectType({
     pokemon: {
       type: new GraphQLList(PokemonType),
       resolve: (pokedex, args, { loaders }) => {
-        const pokemonNames = pokedex.results.map(pokemon => pokemon.name);
+        console.log(pokedex);
+        const pokemonNames = pokedex.map(pokemon => pokemon.identifier);
         return loaders.pokemon.loadMany(pokemonNames);
       }
     }
@@ -278,9 +282,11 @@ const QueryType = new GraphQLObjectType({
         "Gets a list of Pokemon. By default it will return the first 20.",
       args: {
         limit: { type: GraphQLInt },
-        offset: { type: GraphQLInt }
+        skip: { type: GraphQLInt }
       },
-      resolve: (root, args, { loaders }) => getPokedex(args.limit, args.offset)
+      resolve: async (root, args, { loaders, mongo: { Pokemon } }) => {
+        return await Pokemon.find().skip(args.skip).limit(args.limit).toArray()
+      }
     },
     pokemon: {
       type: PokemonType,

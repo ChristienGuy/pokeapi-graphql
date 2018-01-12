@@ -10,6 +10,6 @@ COPY . /usr/src/app
 RUN ["chmod", "+x", "./run.sh"]
 # Install dependencies
 RUN npm install
-EXPOSE 5000
+EXPOSE 80
 
 ENTRYPOINT ["./run.sh"]

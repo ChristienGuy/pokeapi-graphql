@@ -10,13 +10,15 @@ services:
   graphql-api:
     build: 
       context: .
+    environment: 
+      - PORT=80
     ports:
-      - "5000:5000"
-    links:
+      - "80:80"
+    depends_on:
       - mongodb
 
   # image specifically for seeding the database
   mongo-seed:
     build: ./mongo-seed
-    links:
+    depends_on:
       - mongodb
