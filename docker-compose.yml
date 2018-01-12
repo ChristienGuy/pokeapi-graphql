@@ -14,11 +14,11 @@ services:
       - PORT=80
     ports:
       - "80:80"
-    depends_on:
+    links:
       - mongodb
 
   # image specifically for seeding the database
   mongo-seed:
     build: ./mongo-seed
-    depends_on:
+    links:
       - mongodb
