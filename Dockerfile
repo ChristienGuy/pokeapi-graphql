@@ -8,6 +8,7 @@ WORKDIR /usr/src/app
 COPY . /usr/src/app
 
 RUN ["chmod", "+x", "./run.sh"]
+RUN ["chmod", "+x", "./wait-for-it.sh"]
 # Install dependencies
 RUN npm install
 EXPOSE 80
