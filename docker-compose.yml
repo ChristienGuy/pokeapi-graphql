@@ -1,11 +1,5 @@
 version: '3'
 services:
-  # Database image
-  mongodb:
-    image: mongo
-    ports:
-      - "27017:27017"
-
   # Own code webserver
   graphql-api:
     build: 
@@ -14,11 +8,5 @@ services:
       - PORT=80
     ports:
       - "80:80"
-    links:
-      - mongodb
-
-  # image specifically for seeding the database
-  mongo-seed:
-    build: ./mongo-seed
     links:
       - mongodb

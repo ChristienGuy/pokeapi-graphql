@@ -8,6 +8,8 @@ import {
   GraphQLList,
   GraphQLBoolean
 } from "graphql";
+import Sequelize from "sequelize";
+const Op = Sequelize.Op;
 
 const AbilityType = new GraphQLObjectType({
   name: "Ability",
@@ -85,10 +87,19 @@ const MoveType = new GraphQLObjectType({
     power: { type: GraphQLInt, resolve: move => move.power || null },
     pokemon: {
       type: new GraphQLList(PokemonType),
-      resolve: (move, args, { loaders }) =>
-        loaders.pokemon.loadMany(
-          move.pokemon.map(pokemon => pokemon.pokemon_id)
-        )
+      resolve: (move, args, { db: { Pokemon, Move } }) =>
+        Pokemon.findAll({
+          where: {
+            id: {
+              [Op.in]: move.pokemons.map(pokemon => pokemon.id)
+            }
+          },
+          include: [
+            {
+              model: Move
+            }
+          ]
+        })
     },
     // FIXME: these no longer return data after data was moved to mongo
     effect_entries: { type: new GraphQLList(MoveEffectType) },
@@ -178,8 +189,16 @@ const PokemonType = new GraphQLObjectType({
     },
     moves: {
       type: new GraphQLList(MoveType),
-      resolve: (pokemon, args, { loaders }) => {
-        return loaders.move.loadMany(pokemon.moves.map(move => move.move_id));
+      resolve: (pokemon, args, { loaders, db: { Move, Pokemon } }) => {
+        return Move.findAll({
+          where: {
+            id: {
+              [Op.in]: pokemon.moves.map(move => move.id)
+            }
+          },
+          include: [{ model: Pokemon }]
+        });
+        // return loaders.move.loadMany(pokemon.moves.map(move => move.move_id));
       }
     },
     stats: {
@@ -284,7 +303,10 @@ const QueryType = new GraphQLObjectType({
         skip: { type: GraphQLInt }
       },
       resolve: async (root, args, { loaders, mongo: { Pokemon } }) => {
-        return await Pokemon.find().skip(args.skip).limit(args.limit).toArray()
+        return await Pokemon.find()
+          .skip(args.skip)
+          .limit(args.limit)
+          .toArray();
       }
     },
     pokemon: {
@@ -293,16 +315,18 @@ const QueryType = new GraphQLObjectType({
       args: {
         name: { type: GraphQLString }
       },
-      resolve: (root, args, { loaders }) => loaders.pokemon.load(args.name)
-      // resolve: async (root, args, { mongo: { Pokemon } }) =>
-      //   await Pokemon.findOne({ identifier: args.name })
-    },
-    pokemonForm: {
-      type: FormType,
-      args: {
-        name: { type: GraphQLString }
-      },
-      resolve: (root, args) => getForm(args.name)
+      resolve: (root, args, { loaders, db: { Pokemon, Move } }) =>
+        Pokemon.find({
+          where: {
+            identifier: args.name
+          },
+          include: [
+            {
+              model: Move
+            }
+          ]
+        })
+      // resolve: (root, args, { loaders }) => loaders.pokemon.load(args.name)
     },
     ability: {
       type: AbilityType,
@@ -322,8 +346,18 @@ const QueryType = new GraphQLObjectType({
         name: { type: GraphQLString },
         id: { type: GraphQLInt }
       },
-      resolve: (root, args, { loaders }) => {
+      resolve: (root, args, { loaders, db: { Move, Pokemon } }) => {
         // TODO: find out if there's a better method for doing OR arguments
+        return Move.find({
+          where: {
+            [Op.or]: [{ identifier: args.name }, { id: args.id }]
+          },
+          include: [
+            {
+              model: Pokemon
+            }
+          ]
+        });
         return loaders.move.load(args.id ? args.id : args.name);
       }
     },
@@ -333,7 +367,16 @@ const QueryType = new GraphQLObjectType({
       args: {
         name: { type: GraphQLString }
       },
-      resolve: (root, args, { loaders }) => loaders.type.load(args.name)
+      resolve: (root, args, { db: { Type, Pokemon } }) => Type.find({
+        where: {
+          [Op.or]: [{ identifier: args.name }, { id: args.id }]
+        },
+        include: [
+          {
+            model: Pokemon
+          }
+        ]
+      })
     }
   })
 });
