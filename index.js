@@ -13,6 +13,30 @@ import { buildDataLoaders } from "./schema/loaders";
     const db = await connectSql();
     const app = express();
 
+    const types = await db.Type.find({
+      where: { id: 1 },
+      include: [
+        {
+          model: db.Type,
+          through: {
+            attributes: ["damage_factor"]
+          },
+          as: "damage_to"
+        },
+        {
+          model: db.Type,
+          as: "damage_from"
+        }
+      ]
+    });
+
+
+    types.damage_to.map(type => {
+      console.log('====================================');
+      console.log("TYPES", type.id, type.type_efficacy.damage_factor);
+      console.log('====================================');
+    })
+
     app.use(cors());
     app.use("/", express.static("docs"));
     app.use(

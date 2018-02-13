@@ -6,7 +6,7 @@ export const connectSql = async () => {
     dialect: "mysql",
     timestamps: false,
     pool: {
-      max: 5,
+      max: 20,
       min: 0,
       acquire: 30000,
       idle: 10000
@@ -93,6 +93,28 @@ export const connectSql = async () => {
     damage_class_id: { type: Sequelize.INTEGER }
   });
 
+  const TypeEfficacy = connection.define("type_efficacy", {
+    damage_type_id: Sequelize.INTEGER,
+    target_type_id: Sequelize.INTEGER,
+    damage_factor: Sequelize.INTEGER
+  }, {
+    freezeTableName: true
+  });
+
+  Type.belongsToMany(Type, {
+    through: TypeEfficacy,
+    foreignKey: "damage_type_id",
+    otherKey: "target_type_id",
+    as: "damage_to"
+  });
+  
+  Type.belongsToMany(Type, {
+    through: TypeEfficacy,
+    foreignKey: "target_type_id",
+    otherKey: "damage_type_id",
+    as: "damage_from"
+  });
+
   Type.belongsToMany(Pokemon, {
     through: PokemonTypes,
     foreignKey: "type_id",
@@ -103,7 +125,7 @@ export const connectSql = async () => {
     foreignKey: "pokemon_id",
     otherKey: "type_id"
   });
-  
+
   Move.belongsToMany(Pokemon, {
     through: PokemonMoves,
     foreignKey: "move_id",

@@ -206,8 +206,15 @@ const PokemonType = new GraphQLObjectType({
     },
     types: {
       type: new GraphQLList(TypeType),
-      resolve: (pokemon, args, { loaders }) =>
-        loaders.type.loadMany(pokemon.types.map(type => type.type_id))
+      resolve: (pokemon, args, { db }) =>
+        getTypes(db, pokemon.types.map(type => type.id))
+      // Type.findAll({
+      //   where: {
+      //     id: {
+      //       [Op.in]: pokemon.types.map(type => type.id)
+      //     }
+      //   }
+      // })
     }
   })
 });
@@ -224,6 +231,50 @@ const StatType = new GraphQLObjectType({
   })
 });
 
+function getTypes({ Type }, ids) {
+  return Type.findAll({
+    where: {
+      id: {
+        [Op.in]: ids
+      }
+    },
+    include: [
+      {
+        model: Type,
+        as: "damage_from",
+        through: {
+          attributes: ["damage_factor"]
+        }
+      },
+      {
+        model: Type,
+        as: "damage_to",
+        through: {
+          attributes: ["damage_factor"]
+        }
+      }
+    ]
+  });
+}
+
+function getType({ Type }, id) {
+  return Type.find({
+    where: {
+      id: id
+    },
+    include: [
+      {
+        model: Type,
+        as: "damage_from"
+      },
+      {
+        model: Type,
+        as: "damage_to"
+      }
+    ]
+  });
+}
+
 const TypeType = new GraphQLObjectType({
   name: "Type",
   description: "...",
@@ -237,37 +288,55 @@ const TypeType = new GraphQLObjectType({
     pokemon: {
       type: new GraphQLList(PokemonType),
       resolve: (type, args, { loaders }) => {
-        return loaders.pokemon.loadMany(
-          type.pokemon.map(pokemon => pokemon.pokemon_id)
-        );
+        // return loaders.pokemon.loadMany(
+        //   type.pokemon.map(pokemon => pokemon.pokemon_id)
+        // );
       }
     },
     half_damage_from: {
       type: new GraphQLList(TypeType),
-      resolve: (type, args, { loaders }) =>
-        loaders.type.loadMany(
-          type.half_damage_from.map(type => type.damage_type_id)
+      resolve: (type, args, { db }) =>
+        getTypes(
+          db,
+          type.damage_from
+            .filter(damageType => damageType.type_efficacy.damage_factor === 50)
+            .map(damageType => damageType.id)
         )
     },
     double_damage_from: {
       type: new GraphQLList(TypeType),
-      resolve: (type, args, { loaders }) =>
-        loaders.type.loadMany(
-          type.double_damage_from.map(type => type.damage_type_id)
+      resolve: (type, args, { db }) =>
+        getTypes(
+          db,
+          type.damage_from
+            .filter(damageType => {
+              return damageType.type_efficacy.damage_factor === 200;
+            })
+            .map(damageType => damageType.id)
         )
     },
     half_damage_to: {
       type: new GraphQLList(TypeType),
-      resolve: (type, args, { loaders }) =>
-        loaders.type.loadMany(
-          type.half_damage_to.map(type => type.target_type_id)
+      resolve: (type, args, { db }) =>
+        getTypes(
+          db,
+          type.damage_to
+            .filter(damageType => {
+              return damageType.type_efficacy.damage_factor === 50;
+            })
+            .map(damageType => damageType.id)
         )
     },
     double_damage_to: {
       type: new GraphQLList(TypeType),
-      resolve: (type, args, { loaders }) =>
-        loaders.type.loadMany(
-          type.double_damage_to.map(type => type.target_type_id)
+      resolve: (type, args, { db }) =>
+        getTypes(
+          db,
+          type.damage_to
+            .filter(damageType => {
+              return damageType.type_efficacy.damage_factor === 200;
+            })
+            .map(damageType => damageType.id)
         )
     }
   })
@@ -315,7 +384,7 @@ const QueryType = new GraphQLObjectType({
       args: {
         name: { type: GraphQLString }
       },
-      resolve: (root, args, { loaders, db: { Pokemon, Move } }) =>
+      resolve: (root, args, { loaders, db: { Pokemon, Move, Type } }) =>
         Pokemon.find({
           where: {
             identifier: args.name
@@ -323,6 +392,9 @@ const QueryType = new GraphQLObjectType({
           include: [
             {
               model: Move
+            },
+            {
+              model: Type
             }
           ]
         })
@@ -367,16 +439,31 @@ const QueryType = new GraphQLObjectType({
       args: {
         name: { type: GraphQLString }
       },
-      resolve: (root, args, { db: { Type, Pokemon } }) => Type.find({
-        where: {
-          [Op.or]: [{ identifier: args.name }, { id: args.id }]
-        },
-        include: [
-          {
-            model: Pokemon
-          }
-        ]
-      })
+      resolve: (root, args, { db: { Type, Pokemon } }) =>
+        Type.find({
+          where: {
+            [Op.or]: [{ identifier: args.name }, { id: args.id }]
+          },
+          include: [
+            {
+              model: Pokemon
+            },
+            {
+              model: Type,
+              through: {
+                attributes: ["damage_factor"]
+              },
+              as: "damage_to"
+            },
+            {
+              model: Type,
+              through: {
+                attributes: ["damage_factor"]
+              },
+              as: "damage_from"
+            }
+          ]
+        })
     }
   })
 });
