@@ -11,8 +11,9 @@ These are being added to regularly but if there is anything that is high priorit
 * Moves
 
 
-## [Read Full Doc](https://christienguy.github.io/pokeapi-graphql/)
+## [Read Full Docs](https://christienguy.github.io/pokeapi-graphql/)
 
 
 
-Run with `docker run -p 5000:5000 --name pokeapi-graphql -v $PWD:/usr/src/app graphql dev`
+git clone then run `npm run dev` to start up a dev server
+

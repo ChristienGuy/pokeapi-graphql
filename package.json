@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "babel-node ./index.js",
-    "dev":
-      "NODE_ENV=dev PORT=5000 nodemon --exec npm run babel-node -- ./index.js",
+    "dev": "NODE_ENV=dev PORT=5000 nodemon --exec npm run babel-node -- ./index.js",
     "babel-node": "babel-node",
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed": "babel-node ./data/seed.js"
@@ -26,6 +25,7 @@
     "mysql": "^2.15.0",
     "mysql2": "^1.5.1",
     "node-fetch": "^1.7.3",
+    "pg": "^7.4.1",
     "sequelize": "^4.31.2"
   },
   "devDependencies": {

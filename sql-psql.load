@@ -1,0 +1,6 @@
+LOAD database
+	FROM mysql://root:root@localhost/pokeapi
+  INTO pgsql:///pokeapi
+  
+  AFTER LOAD DO
+  $$ ALTER DATABASE pokeapi SET search_path TO pokeapi, public; $$;

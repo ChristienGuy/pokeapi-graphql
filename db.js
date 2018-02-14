@@ -1,9 +1,7 @@
 import Sequelize from "sequelize";
 
 export const connectSql = async () => {
-  const connection = new Sequelize("pokeapi", "root", "root", {
-    host: "localhost",
-    dialect: "mysql",
+  const connection = new Sequelize("postgresql:///pokeapi", {
     timestamps: false,
     pool: {
       max: 20,
@@ -21,7 +19,7 @@ export const connectSql = async () => {
     .then(() => {
       console.log("Database connection established");
     })
-    .catch(() => {
+    .catch(err => {
       console.log("Unable to connect to the database: ", err);
     });
 
@@ -42,7 +40,13 @@ export const connectSql = async () => {
     },
     {
       freezeTableName: true,
-      timestamps: false
+      timestamps: false,
+      indexes: [
+        {
+          unique: true,
+          fields: ["id"]
+        }
+      ]
     }
   );
 
@@ -56,7 +60,15 @@ export const connectSql = async () => {
       level: { type: Sequelize.INTEGER },
       order: { type: Sequelize.INTEGER }
     },
-    { timestamps: false }
+    {
+      timestamps: false,
+      indexes: [
+        {
+          unique: false,
+          fields: ["pokemon_id", "move_id", "version_group_id"]
+        }
+      ]
+    }
   );
 
   const Move = connection.define(
@@ -72,42 +84,83 @@ export const connectSql = async () => {
       accuracy: { type: Sequelize.INTEGER },
       priority: { type: Sequelize.INTEGER }
     },
-    { timestamps: false }
+    {
+      timestamps: false,
+      indexes: [
+        {
+          unique: true,
+          fields: ["id"]
+        }
+      ]
+    }
   );
 
-  const PokemonTypes = connection.define("pokemon_types", {
-    pokemon_id: {
-      type: Sequelize.INTEGER
+  const PokemonTypes = connection.define(
+    "pokemon_types",
+    {
+      pokemon_id: {
+        type: Sequelize.INTEGER,
+        primaryKey: true
+      },
+      type_id: { type: Sequelize.INTEGER, primaryKey: true },
+      slot: Sequelize.INTEGER
     },
-    type_id: Sequelize.INTEGER,
-    slot: Sequelize.INTEGER
-  });
+    {
+      indexes: [
+        {
+          unique: true,
+          fields: ["pokemon_id", "type_id", "slot"]
+        }
+      ]
+    }
+  );
 
-  const Type = connection.define("type", {
-    id: {
-      type: Sequelize.INTEGER,
-      primaryKey: true
+  const Type = connection.define(
+    "type",
+    {
+      id: {
+        type: Sequelize.INTEGER,
+        primaryKey: true
+      },
+      identifier: { type: Sequelize.STRING },
+      generation_id: { type: Sequelize.INTEGER },
+      damage_class_id: { type: Sequelize.INTEGER }
     },
-    identifier: { type: Sequelize.STRING },
-    generation_id: { type: Sequelize.INTEGER },
-    damage_class_id: { type: Sequelize.INTEGER }
-  });
+    {
+      indexes: [
+        {
+          unique: true,
+          fields: ["id"]
+        }
+      ]
+    }
+  );
 
-  const TypeEfficacy = connection.define("type_efficacy", {
-    damage_type_id: Sequelize.INTEGER,
-    target_type_id: Sequelize.INTEGER,
-    damage_factor: Sequelize.INTEGER
-  }, {
-    freezeTableName: true
-  });
+  const TypeEfficacy = connection.define(
+    "type_efficacy",
+    {
+      damage_type_id: Sequelize.INTEGER,
+      target_type_id: Sequelize.INTEGER,
+      damage_factor: Sequelize.INTEGER
+    },
+    {
+      freezeTableName: true,
+      indexes: [
+        {
+          unique: true,
+          fields: ["damage_type_id", "target_type_id"]
+        }
+      ]
+    }
+  );
 
+  // Type - Type associations
   Type.belongsToMany(Type, {
     through: TypeEfficacy,
     foreignKey: "damage_type_id",
     otherKey: "target_type_id",
     as: "damage_to"
   });
-  
   Type.belongsToMany(Type, {
     through: TypeEfficacy,
     foreignKey: "target_type_id",
@@ -115,6 +168,7 @@ export const connectSql = async () => {
     as: "damage_from"
   });
 
+  // Pokemon - Type associations
   Type.belongsToMany(Pokemon, {
     through: PokemonTypes,
     foreignKey: "type_id",
@@ -126,6 +180,7 @@ export const connectSql = async () => {
     otherKey: "type_id"
   });
 
+  // Move - Pokemon associations
   Move.belongsToMany(Pokemon, {
     through: PokemonMoves,
     foreignKey: "move_id",
