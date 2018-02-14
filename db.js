@@ -1,7 +1,8 @@
 import Sequelize from "sequelize";
 
+const connectionString = process.env.DATABASE_URL || "postgresql:///pokeapi";
 export const connectSql = async () => {
-  const connection = new Sequelize("postgresql:///pokeapi", {
+  const connection = new Sequelize(connectionString, {
     timestamps: false,
     pool: {
       max: 20,
