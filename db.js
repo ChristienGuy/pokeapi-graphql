@@ -1,6 +1,6 @@
 import Sequelize from "sequelize";
 
-const connectionString = process.env.DATABASE_URL || "postgresql:///pokeapi";
+const connectionString = process.env.HEROKU_POSTGRESQL_WHITE_URL || "postgresql:///pokeapi";
 export const connectSql = async () => {
   const connection = new Sequelize(connectionString, {
     timestamps: false,
