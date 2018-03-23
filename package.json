@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "babel-node ./index.js",
-    "dev": "NODE_ENV=dev PORT=5000 nodemon --exec npm run babel-node -- ./index.js",
-    "babel-node": "babel-node",
+    "dev": "NODE_ENV=dev PORT=5000 nodemon --exec npm run babel-node ./index.js",
+    "babel-node": "babel-node --inspect",
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed": "babel-node ./data/seed.js"
   },

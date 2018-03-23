@@ -14,32 +14,35 @@ const Op = Sequelize.Op;
 // Helper functions
 // Prolly move these into their own place
 function getTypes({ Type, Pokemon }, ids) {
-  return Type.findAll({
-    where: {
-      id: {
-        [Op.in]: ids
-      }
+  return Type.findAll(
+    {
+      where: {
+        id: {
+          [Op.in]: ids
+        }
+      },
+      include: [
+        {
+          model: Type,
+          as: "damage_from",
+          through: {
+            attributes: ["damage_factor"]
+          }
+        },
+        {
+          model: Type,
+          as: "damage_to",
+          through: {
+            attributes: ["damage_factor"]
+          }
+        },
+        {
+          model: Pokemon
+        }
+      ]
     },
-    include: [
-      {
-        model: Type,
-        as: "damage_from",
-        through: {
-          attributes: ["damage_factor"]
-        }
-      },
-      {
-        model: Type,
-        as: "damage_to",
-        through: {
-          attributes: ["damage_factor"]
-        }
-      },
-      {
-        model: Pokemon
-      }
-    ]
-  });
+    { raw: true }
+  );
 }
 
 function getType({ Type, Pokemon }, id, name) {
@@ -50,6 +53,7 @@ function getType({ Type, Pokemon }, id, name) {
     include: [
       {
         model: Type,
+        attributes: ["id"],
         through: {
           attributes: ["damage_factor"]
         },
@@ -57,48 +61,60 @@ function getType({ Type, Pokemon }, id, name) {
       },
       {
         model: Type,
+        attributes: ["id"],
         through: {
           attributes: ["damage_factor"]
         },
         as: "damage_to"
       },
       {
-        model: Pokemon
+        model: Pokemon,
+        attributes: ["id"]
       }
     ]
   });
 }
 
 function getPokemon({ Pokemon, Type, Move }, id) {
-  return Pokemon.find({
-    where: {
-      id: id
-    },
-    include: [
-      {
-        model: Type
+  return Pokemon.find(
+    {
+      where: {
+        id: id
       },
-      {
-        model: Move
-      }
-    ]
-  });
+      include: [
+        {
+          model: Type,
+          attributes: ["id"]
+        },
+        {
+          model: Move,
+          attributes: ["id"]
+        }
+      ]
+    },
+    { raw: true }
+  );
 }
 
 function getManyPokemon({ Pokemon, Type, Move }, ids) {
-  return Pokemon.findAll({
-    where: {
-      id: { [Op.in]: ids }
-    },
-    include: [
-      {
-        model: Type
+  return Pokemon.findAll(
+    {
+      where: {
+        id: { [Op.in]: ids }
       },
-      {
-        model: Move
-      }
-    ]
-  });
+      include: [
+        {
+          model: Type,
+          attributes: ["id"]
+        },
+        {
+          model: Move,
+          attributes: ["id"]
+        }
+      ]
+    },
+    { raw: true }
+  );
 }
 
 // GQL Objects
@@ -178,19 +194,7 @@ const MoveType = new GraphQLObjectType({
     power: { type: GraphQLInt, resolve: move => move.power || null },
     pokemon: {
       type: new GraphQLList(PokemonType),
-      resolve: (move, args, { db: { Pokemon, Move } }) =>
-        Pokemon.findAll({
-          where: {
-            id: {
-              [Op.in]: move.pokemons.map(pokemon => pokemon.id)
-            }
-          },
-          include: [
-            {
-              model: Move
-            }
-          ]
-        })
+      resolve: (move, args, { db, loaders }) => loaders.pokemon.loadMany(move.pokemons.map(pokemon => pokemon.id))
     },
     // FIXME: these no longer return data after data was moved to mongo
     effect_entries: { type: new GraphQLList(MoveEffectType) },
@@ -297,8 +301,8 @@ const PokemonType = new GraphQLObjectType({
     },
     types: {
       type: new GraphQLList(TypeType),
-      resolve: (pokemon, args, { db }) =>
-        getTypes(db, pokemon.types.map(type => type.id))
+      resolve: (pokemon, args, { db, loaders }) =>
+        loaders.type.loadMany(pokemon.types.map(type => type.id))
     }
   })
 });
@@ -327,8 +331,9 @@ const TypeType = new GraphQLObjectType({
     _id: { type: GraphQLString },
     pokemon: {
       type: new GraphQLList(PokemonType),
-      resolve: (type, args, { db }) =>
-        getManyPokemon(db, type.pokemons.map(pokemon => pokemon.id))
+      resolve: (type, args, { db, loaders }) =>
+      loaders.pokemon.loadMany(type.pokemons.map(pokemon => pokemon.id))
+        // getManyPokemon(db, type.pokemons.map(pokemon => pokemon.id))
     },
     half_damage_from: {
       type: new GraphQLList(TypeType),
@@ -385,12 +390,16 @@ const PokedexType = new GraphQLObjectType({
   description:
     "Returns a list of Pokemon types. By default it will return the first 20.",
   fields: () => ({
-    count: { type: GraphQLInt },
+    count: {
+      type: GraphQLInt,
+      resolve: (pokedex, args, { db }) => {
+        // TODO: return a count
+      }
+    },
     pokemon: {
       type: new GraphQLList(PokemonType),
-      resolve: (pokedex, args, { loaders }) => {
-        const pokemonNames = pokedex.map(pokemon => pokemon.identifier);
-        return loaders.pokemon.loadMany(pokemonNames);
+      resolve: (pokedex, args, { db, loaders }) => {
+        return loaders.pokemon.loadMany(pokedex.map(pokemon => pokemon.id));
       }
     }
   })
@@ -409,11 +418,11 @@ const QueryType = new GraphQLObjectType({
         limit: { type: GraphQLInt },
         skip: { type: GraphQLInt }
       },
-      resolve: async (root, args, { loaders, mongo: { Pokemon } }) => {
-        return await Pokemon.find()
-          .skip(args.skip)
-          .limit(args.limit)
-          .toArray();
+      resolve: (root, args, { db: { Pokemon } }) => {
+        return Pokemon.findAll({
+          limit: args.limit,
+          offset: args.skip
+        });
       }
     },
     pokemon: {
@@ -422,7 +431,7 @@ const QueryType = new GraphQLObjectType({
       args: {
         name: { type: GraphQLString }
       },
-      resolve: (root, args, { loaders, db: { Pokemon, Move, Type } }) =>
+      resolve: (root, args, { db: { Pokemon, Move, Type } }) =>
         Pokemon.find({
           where: {
             identifier: args.name
@@ -436,18 +445,17 @@ const QueryType = new GraphQLObjectType({
             }
           ]
         })
-      // resolve: (root, args, { loaders }) => loaders.pokemon.load(args.name)
     },
-    ability: {
-      type: AbilityType,
-      description: "Gets a single ability",
-      args: {
-        name: { type: GraphQLString },
-        id: { type: GraphQLInt }
-      },
-      resolve: async (root, args, { mongo: { Abilities } }) =>
-        await Abilities.find({ id: args.id }).toArray()
-    },
+    // ability: {
+    //   type: AbilityType,
+    //   description: "Gets a single ability",
+    //   args: {
+    //     name: { type: GraphQLString },
+    //     id: { type: GraphQLInt }
+    //   },
+    //   resolve: async (root, args, { mongo: { Abilities } }) =>
+    //     await Abilities.find({ id: args.id }).toArray()
+    // },
     move: {
       type: MoveType,
       description:

@@ -66,7 +66,7 @@ export const connectSql = async () => {
       indexes: [
         {
           unique: false,
-          fields: ["pokemon_id", "move_id", "version_group_id"]
+          fields: ["pokemon_id", "move_id"]
         }
       ]
     }

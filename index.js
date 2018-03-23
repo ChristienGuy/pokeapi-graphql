@@ -1,8 +1,6 @@
 import express from "express";
 import graphQLHTTP from "express-graphql";
 import cors from "cors";
-import path from "path";
-// import mysql from "mysql";
 import pg from "pg";
 
 import schema from "./schema/schema";
@@ -17,10 +15,10 @@ import { buildDataLoaders } from "./schema/loaders";
     app.use(cors());
     app.use("/", express.static("docs"));
     app.use(
+      "/graphql",
       graphQLHTTP((req, res, graphQLParams) => {
         // TODO: replace with sql data loaders
-        // const loaders = buildDataLoaders(mongo);
-        const loaders = {};
+        const loaders = buildDataLoaders(db);
         return {
           context: { loaders, db },
           schema,
